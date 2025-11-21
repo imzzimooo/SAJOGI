@@ -13,6 +13,7 @@ Sensing (In Progress): LiDAR integration using YD LiDAR G4.
 Navigation (In Progress): SLAM experimentation.
 Design: Custom frame modeled after KDY0523 Spot Micro.
 
+
 🔧 Hardware Specifications
 * Description
 * Raspberry Pi 4B
@@ -21,6 +22,7 @@ Design: Custom frame modeled after KDY0523 Spot Micro.
 * 2-cell 1400 mAh LiPo Battery
 *  Modified KDY0523 Spot Micro STL
 * YD LiDAR G4 (Planned), IMU (Planned)
+  
 
 📁 References
 * https://gitlab.com/public-open-source/spotmicroai
