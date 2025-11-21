@@ -22,28 +22,6 @@ Design: Custom frame modeled after KDY0523 Spot Micro.
 * 2-cell 1400 mAh LiPo Battery
 *  Modified KDY0523 Spot Micro STL
 * YD LiDAR G4 (Planned), IMU (Planned)
-
-  graph LR
-    %% 전원부
-    LiPo[LiPo Battery 7.4V] --> UBEC_Motor[고용량 UBEC\n(7.4V -> 6V, 15A+)]
-    LiPo --> UBEC_RPi[별도 UBEC\n(7.4V -> 5V, 3A+)]
-
-    %% 라즈베리파이
-    UBEC_RPi -->|5V / GND| RPi[Raspberry Pi 4B]
-    RPi -->|USB| Cam[Camera]
-
-    %% 모터 제어부
-    UBEC_Motor -->|6V / GND| PCA[PCA9685 Driver]
-    RPi -->|I2C (SDA/SCL)| PCA
-    RPi -->|3.3V / GND| PCA
-    
-    %% 서보모터
-    PCA -->|PWM / Power| Servo1[Servo x12]
-    Cap[Capacitor 1200uF] -.- PCA
-
-    %% LCD (전압 주의)
-    RPi -->|I2C (SDA/SCL)| LCD[I2C LCD]
-    RPi -->|5V / GND| LCD
   
 
 📁 References
