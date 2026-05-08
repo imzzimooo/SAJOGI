@@ -1,7 +1,7 @@
 import os
 import time
 from dynamixel_sdk import *
-DEVICENAME = 'COM3'
+DEVICENAME = 'COM10'
 BAUDRATE = 57600
 PROTOCOL_VERSION = 2.0
 thighs=[10,4,1,7] #허벅지 모터 아이디
