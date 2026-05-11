@@ -3,7 +3,7 @@ import time
 import math
 from dynamixel_sdk import *
 
-DEVICENAME = '/dev/tty.usbserial-FT3WKKNI'
+DEVICENAME = '/dev/tty.usbserial-FT3WKKNI'  #Devidename needs to be changed depending on user
 BAUDRATE = 57600
 PROTOCOL_VERSION = 2.0
 
