@@ -22,6 +22,10 @@ Design: Custom frame modeled after KDY0523 Spot Micro.
 * 2-cell 1400 mAh LiPo Battery
 *  Modified KDY0523 Spot Micro STL
 * YD LiDAR G4 (Planned), IMU (Planned)
+
+
+SAJOGI Ver.2 — Spot-Micro Inspired Quadruped Robot
+📌 Overview
   
 
 📁 References
