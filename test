@@ -92,6 +92,10 @@ try:
     move_indiv(10,THIGH_UP,0)
     move_indiv(10,0,THIGH_UP)
     print("Phase 3: UP → DOWN")
+    move_indiv(7, 1230, THIGH_UP)
+    move_indiv(6, 725, KNEE_UP)
+    move_indiv(1, 1230, THIGH_UP)
+    move_indiv(0, 725, KNEE_UP)
     move_sync(THIGH_UP, THIGH_DOWN, KNEE_UP, KNEE_DOWN)
 
     print("Done.")
