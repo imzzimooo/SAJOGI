@@ -1,0 +1,110 @@
+import os
+import time
+import math
+from dynamixel_sdk import *
+
+DEVICENAME = 'COM3'  #Devidename needs to be changed depending on user
+BAUDRATE = 57600
+PROTOCOL_VERSION = 2.0
+
+thighs = [10, 4, 1, 7]
+knees  = [9, 3, 6, 0]
+joints=[2,5,8,11]
+
+ADDR_PRO_TORQUE_ENABLE   = 64
+ADDR_PRO_GOAL_POSITION   = 116
+ADDR_PRO_PRESENT_POSITION = 132
+
+# ── Position ranges ────────────────────────────────────────────────
+THIGH_DOWN = 1300
+THIGH_UP   = 1700
+
+KNEE_DOWN  = 1200
+KNEE_UP    = 1050   # "up" means more bent (smaller value)
+
+# ── Trajectory settings ────────────────────────────────────────────
+STEPS        = 60    # number of interpolation steps per phase
+STEP_DELAY   = 0.02  # seconds between steps → total ~1.2 s per phase
+
+portHandler   = PortHandler(DEVICENAME)
+packetHandler = PacketHandler(PROTOCOL_VERSION)
+
+
+def ease_in_out(t: float) -> float:
+    """Smoothstep easing: slow start, fast middle, slow end (t in [0,1])."""
+    return t * t * (3 - 2 * t)
+
+
+def interpolate(start: int, end: int, t: float) -> int:
+    """Linear interpolation with smoothstep easing applied to t."""
+    eased = ease_in_out(t)
+    return int(start + (end - start) * eased)
+
+def move_indiv(id,start,end,steps=STEPS,delay=STEP_DELAY):
+    for step in range(steps+1):
+        t=step/steps
+        pos=interpolate(start,end,t)
+        packetHandler.write4ByteTxRx(portHandler, id, ADDR_PRO_GOAL_POSITION, pos)
+        time.sleep(delay)
+def move_two(ID1,ID2,start_1,start_2,end_1,end_2,steps=STEPS,delay=STEP_DELAY):
+    for step in range(steps + 1):
+        t = step / steps
+        pos_1 = interpolate(start_1, end_1, t)
+        pos_2  = interpolate(start_2, end_2,  t)
+        packetHandler.write4ByteTxRx(portHandler, ID1, ADDR_PRO_GOAL_POSITION, pos_1)
+        packetHandler.write4ByteTxRx(portHandler, ID2, ADDR_PRO_GOAL_POSITION, pos_2)
+        time.sleep(delay)
+
+
+def move_sync(thigh_start, thigh_end, knee_start, knee_end, steps=STEPS, delay=STEP_DELAY):
+    """Smoothly move thighs and knees together from start to end positions."""
+    for step in range(steps + 1):
+        t = step / steps
+        thigh_pos = interpolate(thigh_start, thigh_end, t)
+        knee_pos  = interpolate(knee_start,  knee_end,  t)
+
+        for id in thighs:
+            packetHandler.write4ByteTxRx(portHandler, id, ADDR_PRO_GOAL_POSITION, thigh_pos)
+        for id in knees:
+            packetHandler.write4ByteTxRx(portHandler, id, ADDR_PRO_GOAL_POSITION, knee_pos)
+
+        time.sleep(delay)
+
+
+
+def enable_torque(motor_ids):
+    for id in motor_ids:
+        packetHandler.write1ByteTxRx(portHandler, id, ADDR_PRO_TORQUE_ENABLE, 1)
+
+
+def disable_torque(motor_ids):
+    for id in motor_ids:
+        packetHandler.write1ByteTxRx(portHandler, id, ADDR_PRO_TORQUE_ENABLE, 0)
+
+
+try:
+    portHandler.openPort()
+    portHandler.setBaudRate(BAUDRATE)
+
+    all_motors = thighs + knees +joints
+    enable_torque(all_motors)
+
+    print("Phase 1: DOWN → UP")
+    move_sync(THIGH_DOWN, THIGH_UP, KNEE_DOWN, KNEE_UP)
+
+    time.sleep(0.3)  # brief pause at top
+    print("phase 2: handshake")
+    thighs=[1,7]
+    knees=[0,6]
+    move_sync(THIGH_UP,1230,KNEE_UP,725)
+    move_indiv(10,THIGH_UP,0)
+    move_indiv(10,0,THIGH_UP)
+    print("Phase 3: UP → DOWN")
+
+    'move_sync(THIGH_UP, THIGH_DOWN, KNEE_UP, KNEE_DOWN)'
+
+    print("Done.")
+
+finally:
+    disable_torque(all_motors)
+    portHandler.closePort()
