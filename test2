@@ -96,7 +96,7 @@ try:
     print("phase 2: handshake")
     thighs=[1,7]
     knees=[0,6]
-    move_sync(THIGH_UP,1230,KNEE_UP,725)
+    move_sync(THIGH_UP,1500,KNEE_UP,KNEE_DOWN)
     move_indiv(10,THIGH_UP,0)
     move_indiv(10,0,THIGH_UP)
     print("Phase 3: UP → DOWN")
