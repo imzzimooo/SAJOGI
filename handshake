@@ -77,7 +77,7 @@ try:
     portHandler.openPort()
     portHandler.setBaudRate(BAUDRATE)
 
-    all_motors = thighs + knees +joints
+    all_motors = thighs + knees + joints
     enable_torque(all_motors)
 
     print("Phase 1: DOWN → UP")
@@ -85,8 +85,12 @@ try:
 
     time.sleep(0.3)  # brief pause at top
     print("phase 2: handshake")
+    move_indiv(7,THIGH_UP,1230)
+    move_indiv(6,KNEE_UP,725)
     move_indiv(10,THIGH_UP,0)
     move_indiv(10,0,THIGH_UP)
+    move_indiv(7, 1230, THIGH_UP)
+    move_indiv(6, 725, KNEE_UP)
     print("Phase 3: UP → DOWN")
     move_sync(THIGH_UP, THIGH_DOWN, KNEE_UP, KNEE_DOWN)
 
