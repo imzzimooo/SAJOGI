@@ -3,7 +3,7 @@ import time
 import math
 from dynamixel_sdk import *
 
-DEVICENAME = 'COM3'  #Devidename needs to be changed depending on user
+DEVICENAME = 'COM7'  #Devidename needs to be changed depending on user
 BAUDRATE = 57600
 PROTOCOL_VERSION = 2.0
 
@@ -83,15 +83,7 @@ try:
     print("Phase 1: DOWN → UP")
     move_sync(THIGH_DOWN, THIGH_UP, KNEE_DOWN, KNEE_UP)
 
-    time.sleep(0.3)  # brief pause at top
-    print("phase 2: handshake")
-    move_indiv(7,THIGH_UP,1230)
-    move_indiv(6,KNEE_UP,725)
-    move_indiv(10,THIGH_UP,0)
-    move_indiv(10,0,THIGH_UP)
-    move_indiv(7, 1230, THIGH_UP)
-    move_indiv(6, 725, KNEE_UP)
-    print("Phase 3: UP → DOWN")
+
     move_sync(THIGH_UP, THIGH_DOWN, KNEE_UP, KNEE_DOWN)
 
     print("Done.")
