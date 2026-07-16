@@ -1,0 +1,58 @@
+import os
+import time
+from dynamixel_sdk import *
+
+# --- 설정 값 ---
+DEVICENAME = 'COM3'  # 환경에 맞게 수정
+BAUDRATE = 57600
+PROTOCOL_VERSION = 2.0
+DXL_ID = 11
+
+# Control Table 주소
+ADDR_PRO_PRESENT_POSITION = 132  # 현재 위치 (4 Byte)
+
+# --- 통신 초기화 ---
+portHandler = PortHandler(DEVICENAME)
+packetHandler = PacketHandler(PROTOCOL_VERSION)
+
+if not portHandler.openPort():
+    print("포트 열기 실패")
+    quit()
+
+if not portHandler.setBaudRate(BAUDRATE):
+    print("통신 속도 설정 실패")
+    quit()
+
+print("실시간 위치 모니터링을 시작합니다. (종료하려면 터미널에서 Ctrl+C 입력)\n")
+
+try:
+    while True:
+        # 현재 위치 읽어오기
+        dxl_present_position, dxl_comm_result, dxl_error = packetHandler.read4ByteTxRx(portHandler, DXL_ID,
+                                                                                       ADDR_PRO_PRESENT_POSITION)
+
+        if dxl_comm_result != COMM_SUCCESS:
+            print(f"\n통신 에러: {packetHandler.getTxRxResult(dxl_comm_result)}")
+        elif dxl_error != 0:
+            print(f"\n하드웨어 에러: {packetHandler.getRxPacketError(dxl_error)}")
+        else:
+            # 32비트 부호 있는 정수(Signed 32-bit)로 변환 (음수 위치 처리용)
+            if dxl_present_position > 2147483647:
+                dxl_present_position -= 4294967296
+
+            # 읽어온 Pulse 값을 각도로 환산 (1 Pulse = 약 0.08789도)
+            # degree = dxl_present_position * 0.08789
+
+            # \r과 end=""를 사용하여 같은 줄에 계속 덮어쓰며 출력
+            print(f"\r현재 위치(Pulse): {dxl_present_position:6d} ", end="")
+
+        # 통신 과부하를 막기 위해 짧은 대기 시간 추가 (초당 약 20회 조회)
+        time.sleep(0.05)
+
+except KeyboardInterrupt:
+    # 사용자가 Ctrl+C를 누르면 루프를 빠져나옴
+    print("\n\n모니터링을 종료합니다.")
+
+finally:
+    # 프로그램 종료 시 포트를 닫아줌
+    portHandler.closePort()
