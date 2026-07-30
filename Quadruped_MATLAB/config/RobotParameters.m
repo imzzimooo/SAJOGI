@@ -58,7 +58,7 @@ classdef RobotParameters
 
             obj.BodyWidth = 124;
 
-            obj.BodyHeight = 180;
+            obj.BodyHeight = 149.7;
 
             %% Leg
 
