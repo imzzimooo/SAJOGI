@@ -16,7 +16,7 @@ classdef RecurDynInterface
                     serverIP = varargin{1};
                     serverPort = varargin{2};
                 else
-                    % 각자 RecurDyn이 실행 중인 PC의 IP와 설정한 Port 번호 변경 필요!
+                    % RecurDyn이 실행 중인 PC의 IP와 설정한 Port 번호 입력
                     serverIP = '127.0.0.1';
                     serverPort = 5000;
                 end
