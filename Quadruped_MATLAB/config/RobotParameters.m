@@ -54,21 +54,21 @@ classdef RobotParameters
 
             %% Body
 
-            obj.BodyLength = 220;
+            obj.BodyLength = 302;
 
-            obj.BodyWidth = 120;
+            obj.BodyWidth = 124;
 
             obj.BodyHeight = 180;
 
             %% Leg
 
-            obj.UpperLeg = 95;
+            obj.UpperLeg = 154.03;
 
-            obj.LowerLeg = 110;
+            obj.LowerLeg = 153.28;
 
-            obj.HipOffsetX = 38;
+            obj.HipOffsetX = 79.00;
 
-            obj.HipOffsetY = 32;
+            obj.HipOffsetY = 31.05;
 
             %% Walking
 
