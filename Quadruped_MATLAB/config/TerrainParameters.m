@@ -48,8 +48,7 @@ classdef TerrainParameters
 
                 case "inclined"
 
-                    % 기본값 (사용자가 변경)
-                    obj.Pitch = 15;
+                    obj.Pitch = 24;
                     obj.Roll  = 0;
                     obj.Yaw   = 0;
 
