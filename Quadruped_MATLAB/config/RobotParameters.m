@@ -89,9 +89,9 @@ classdef RobotParameters
 
             obj.SwingHeight = 25;
 
-            obj.DesiredVelocity = 300;
+            obj.DesiredVelocity = 180;
 
-            obj.SwingTime = 0.25;
+            obj.SwingTime = 0.6;
 
             obj.PhaseLag = [
 
