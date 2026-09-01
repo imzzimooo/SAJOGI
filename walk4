@@ -152,7 +152,68 @@ def move_sync(thigh_list,knee_list,joint_list,thigh_start, thigh_end, knee_start
             packetHandler.write4ByteTxRx(portHandler, t_id, ADDR_PRO_GOAL_POSITION, thigh_pos)
             packetHandler.write4ByteTxRx(portHandler, k_id, ADDR_PRO_GOAL_POSITION, knee_pos)
         time.sleep(delay)
+def move_motors(
+    motor_ids,
+    last_positions,
+    end_positions,
+    steps=4,
+    delay=0.02
+):
+    group_sync_write = GroupSyncWrite(
+        portHandler,
+        packetHandler,
+        ADDR_PRO_GOAL_POSITION,
+        LEN_PRO_GOAL_POSITION
+    )
 
+    start_positions = [
+        last_positions[motor_id]
+        for motor_id in motor_ids
+    ]
+
+    for step in range(steps + 1):
+        t = step / steps
+
+        positions = [
+            interpolate(start, end, t)
+            for start, end in zip(
+                start_positions,
+                end_positions
+            )
+        ]
+
+        for motor_id, position in zip(
+            motor_ids,
+            positions
+        ):
+            param = [
+                DXL_LOBYTE(DXL_LOWORD(position)),
+                DXL_HIBYTE(DXL_LOWORD(position)),
+                DXL_LOBYTE(DXL_HIWORD(position)),
+                DXL_HIBYTE(DXL_HIWORD(position))
+            ]
+
+            if not group_sync_write.addParam(motor_id, param):
+                group_sync_write.clearParam()
+                raise RuntimeError(
+                    f"[ID:{motor_id}] 데이터 등록 실패"
+                )
+
+        comm_result = group_sync_write.txPacket()
+        group_sync_write.clearParam()
+
+        if comm_result != COMM_SUCCESS:
+            raise RuntimeError(
+                packetHandler.getTxRxResult(comm_result)
+            )
+
+        time.sleep(delay)
+
+    for motor_id, position in zip(
+        motor_ids,
+        end_positions
+    ):
+        last_positions[motor_id] = position
 
 
 def enable_torque(motor_ids):
@@ -193,18 +254,18 @@ def read_current_positions(motor_ids):
 
     return positions
 def record_manual_trajectory(
+    motor_ids,
     filename,
     sample_period=0.1
 ):
-    motor_ids = [6, 7]
-
-    print("다리를 손으로 지지하세요.")
+    print(f"기록할 모터: {motor_ids}")
+    print("로봇 몸통을 손이나 지그로 확실히 지지하세요.")
     input("토크를 해제하려면 Enter를 누르세요.")
 
     disable_torque(motor_ids)
 
-    print("ID 6·7 토크가 해제되었습니다.")
-    input("기록을 시작하려면 Enter를 누르세요.")
+    print("토크가 해제되었습니다.")
+    input("수동 shift 기록을 시작하려면 Enter를 누르세요.")
 
     print("기록 중입니다. 종료하려면 Ctrl+C를 누르세요.")
 
@@ -215,16 +276,16 @@ def record_manual_trajectory(
                     positions = read_current_positions(motor_ids)
 
                 except RuntimeError:
-                    # 손상된 통신 패킷을 비우고 다음 측정으로 넘어감
                     portHandler.clearPort()
                     time.sleep(sample_period)
                     continue
 
-                # 첫 번째 열: ID 7
-                # 두 번째 열: ID 6
-                file.write(
-                    f"{positions[7]},{positions[6]}\n"
+                line = ",".join(
+                    str(positions[motor_id])
+                    for motor_id in motor_ids
                 )
+
+                file.write(line + "\n")
                 file.flush()
 
                 time.sleep(sample_period)
@@ -233,9 +294,9 @@ def record_manual_trajectory(
             print("\n기록을 종료했습니다.")
 
     print(f"저장 완료: {filename}")
-
 def load_trajectory(filename):
     trajectory = []
+    column_count = None
 
     with open(filename, "r", encoding="utf-8") as file:
         for line_number, line in enumerate(file, start=1):
@@ -245,17 +306,27 @@ def load_trajectory(filename):
                 continue
 
             try:
-                first_value, second_value = line.split(",")
-
-                first_value = int(first_value.strip())
-                second_value = int(second_value.strip())
+                values = tuple(
+                    int(value.strip())
+                    for value in line.split(",")
+                )
 
             except ValueError:
                 raise ValueError(
-                    f"{filename}의 {line_number}번째 줄 형식 오류: {line}"
+                    f"{filename}의 {line_number}번째 줄 형식 오류: "
+                    f"{line}"
                 )
 
-            trajectory.append((first_value, second_value))
+            if column_count is None:
+                column_count = len(values)
+
+            if len(values) != column_count:
+                raise ValueError(
+                    f"{filename}의 {line_number}번째 줄 열 개수가 "
+                    f"일치하지 않습니다."
+                )
+
+            trajectory.append(values)
 
     if not trajectory:
         raise ValueError(f"{filename}에 데이터가 없습니다.")
@@ -266,17 +337,13 @@ def follow_trajectory(
     motor_ids,
     last_positions,
     steps=9,
-    delay=0.025
+    delay=0.02
 ):
-    id_1, id_2 = motor_ids
-
-    for end_1, end_2 in trajectory:
-        move_two(
-            id_1,
-            id_2,
-            last_positions,
-            end_1,
-            end_2,
+    for end_positions in trajectory:
+        move_motors(
+            motor_ids=motor_ids,
+            last_positions=last_positions,
+            end_positions=end_positions,
             steps=steps,
             delay=delay
         )
@@ -289,8 +356,6 @@ try:
 
     all_motors = thighs + knees +joints
     last_positions = read_current_positions(all_motors)
-    for motor_id in all_motors:
-        print(f"ID {motor_id}: {last_positions[motor_id]}")
     enable_torque(all_motors)
     print("Phase 1: DOWN → UP")
     move_four(
@@ -301,13 +366,34 @@ try:
     )
     move_four(1,7,4,10,last_positions,1800,1800,1800,1800,delay=0.1)
 
-    move_four(3,6,9,0,last_positions,900,900,900,900,delay=0.1)
+    move_four(3,6,9,0,last_positions,900,900,900,900,delay=0.5)
     time.sleep(1)  # brief pause at top
+    print("Phase 2: RB stride")
+
     trajectory = load_trajectory("RBstride.txt")
 
     follow_trajectory(
         trajectory=trajectory,
         motor_ids=[7, 6],
+        last_positions=last_positions,
+        delay=0.025
+    )
+    shift_motor_ids = [
+        10, 4, 1, 7,  # 허벅지 4개
+        9, 3, 6, 0  # 무릎 4개
+    ]
+    shift_trajectory = load_trajectory("shift1.txt")
+
+    follow_trajectory(
+        trajectory=shift_trajectory,
+        motor_ids=shift_motor_ids,
+        last_positions=last_positions,
+        delay=0.025
+    )
+
+    follow_trajectory(
+        trajectory=load_trajectory("RFstride.txt"),
+        motor_ids=[10,9],
         last_positions=last_positions,
         delay=0.025
     )
