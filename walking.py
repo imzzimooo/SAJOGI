@@ -1,0 +1,434 @@
+import os
+import time
+import math
+from dynamixel_sdk import *
+
+DEVICENAME = 'COM3'  #Devidename needs to be changed depending on user
+BAUDRATE = 57600
+PROTOCOL_VERSION = 2.0
+
+thighs = [10, 4, 1, 7]
+knees  = [9, 3, 6, 0]
+joints=[2,5,8,11]
+
+ADDR_PRO_TORQUE_ENABLE   = 64
+ADDR_PRO_GOAL_POSITION   = 116
+ADDR_PRO_PRESENT_POSITION = 132
+
+
+LEN_PRO_GOAL_POSITION     = 4
+# ── Position ranges ────────────────────────────────────────────────
+THIGH_DOWN = 1300
+THIGH_UP   = 1300
+
+KNEE_DOWN  = 1200
+KNEE_UP    = 1050   # "up" means more bent (smaller value)
+
+# ── Trajectory settings ────────────────────────────────────────────
+STEPS        = 60    # number of interpolation steps per phase
+STEP_DELAY   = 0.02  # seconds between steps → total ~1.2 s per phase
+
+portHandler   = PortHandler(DEVICENAME)
+packetHandler = PacketHandler(PROTOCOL_VERSION)
+
+
+def ease_in_out(t: float) -> float:
+    """Smoothstep easing: slow start, fast middle, slow end (t in [0,1])."""
+    return t * t * (3 - 2 * t)
+
+
+def interpolate(start: int, end: int, t: float) -> int:
+    """Linear interpolation with smoothstep easing applied to t."""
+    eased = ease_in_out(t)
+    return int(start + (end - start) * eased)
+
+def move_indiv(id,last_positions,end,steps=STEPS,delay=STEP_DELAY):
+    for step in range(steps+1):
+        t=step/steps
+        pos=interpolate(last_positions[id],end,t)
+        packetHandler.write4ByteTxRx(portHandler, id, ADDR_PRO_GOAL_POSITION, pos)
+        time.sleep(delay)
+    last_positions[id]=end
+def move_two(id_1,id_2,last_positions,end1,end2,steps=STEPS,delay=STEP_DELAY):
+    for step in range(steps+1):
+        t=step/steps
+        pos1=interpolate(last_positions[id_1],end1,t)
+        pos2=interpolate(last_positions[id_2],end2,t)
+        packetHandler.write4ByteTxRx(portHandler, id_1, ADDR_PRO_GOAL_POSITION, pos1)
+        packetHandler.write4ByteTxRx(portHandler, id_2, ADDR_PRO_GOAL_POSITION, pos2)
+        time.sleep(delay)
+    last_positions[id_1]=end1
+    last_positions[id_2]=end2
+def move_three(id_1,id_2,id_3,last_positions,end1,end2,end3,steps=STEPS,delay=STEP_DELAY):
+    for step in range(steps+1):
+        t=step/steps
+        pos1=interpolate(last_positions[id_1],end1,t)
+        pos2=interpolate(last_positions[id_2],end2,t)
+        pos3=interpolate(last_positions[id_3],end3,t)
+        packetHandler.write4ByteTxRx(portHandler, id_1, ADDR_PRO_GOAL_POSITION, pos1)
+        packetHandler.write4ByteTxRx(portHandler, id_2, ADDR_PRO_GOAL_POSITION, pos2)
+        packetHandler.write4ByteTxRx(portHandler, id_3, ADDR_PRO_GOAL_POSITION, pos3)
+        time.sleep(delay)
+    last_positions[id_1]=end1
+    last_positions[id_2]=end2
+    last_positions[id_3]=end3
+def move_four(
+    id_1, id_2, id_3, id_4,
+    last_positions,
+    end1, end2, end3, end4,
+    steps=STEPS,
+    delay=STEP_DELAY
+):
+    groupSyncWrite = GroupSyncWrite(
+        portHandler,
+        packetHandler,
+        ADDR_PRO_GOAL_POSITION,
+        LEN_PRO_GOAL_POSITION
+    )
+
+    motor_ids = [id_1, id_2, id_3, id_4]
+    end_positions = [end1, end2, end3, end4]
+
+    # 함수가 시작될 때의 위치를 고정해 둔다.
+    start_positions = [
+        last_positions[id_1],
+        last_positions[id_2],
+        last_positions[id_3],
+        last_positions[id_4]
+    ]
+
+    for step in range(steps + 1):
+        t = step / steps
+
+        positions = [
+            interpolate(start_positions[0], end1, t),
+            interpolate(start_positions[1], end2, t),
+            interpolate(start_positions[2], end3, t),
+            interpolate(start_positions[3], end4, t)
+        ]
+
+        for motor_id, position in zip(motor_ids, positions):
+            param_goal_position = [
+                DXL_LOBYTE(DXL_LOWORD(position)),
+                DXL_HIBYTE(DXL_LOWORD(position)),
+                DXL_LOBYTE(DXL_HIWORD(position)),
+                DXL_HIBYTE(DXL_HIWORD(position))
+            ]
+
+            if not groupSyncWrite.addParam(
+                motor_id,
+                param_goal_position
+            ):
+                raise RuntimeError(
+                    f"[ID:{motor_id}] GroupSyncWrite addParam 실패"
+                )
+
+        # 네 모터의 목표 위치를 하나의 통신 패킷으로 전송
+        comm_result = groupSyncWrite.txPacket()
+
+        if comm_result != COMM_SUCCESS:
+            raise RuntimeError(
+                packetHandler.getTxRxResult(comm_result)
+            )
+
+        # 다음 단계 데이터를 넣기 전에 반드시 비움
+        groupSyncWrite.clearParam()
+
+        time.sleep(delay)
+
+    last_positions[id_1] = end1
+    last_positions[id_2] = end2
+    last_positions[id_3] = end3
+    last_positions[id_4] = end4
+def move_sync(thigh_list,knee_list,joint_list,thigh_start, thigh_end, knee_start, knee_end, steps=STEPS, delay=STEP_DELAY):
+    """Smoothly move thighs and knees together from start to end positions."""
+    for j_id in joint_list:
+        packetHandler.write4ByteTxRx(portHandler, j_id, ADDR_PRO_GOAL_POSITION, 0)
+    for step in range(steps + 1):
+        t = step / steps
+        thigh_pos = interpolate(thigh_start, thigh_end, t)
+        knee_pos  = interpolate(knee_start,  knee_end,  t)
+        for t_id, k_id in zip(thigh_list, knee_list):
+            packetHandler.write4ByteTxRx(portHandler, t_id, ADDR_PRO_GOAL_POSITION, thigh_pos)
+            packetHandler.write4ByteTxRx(portHandler, k_id, ADDR_PRO_GOAL_POSITION, knee_pos)
+        time.sleep(delay)
+def move_motors(
+    motor_ids,
+    last_positions,
+    end_positions,
+    steps=4,
+    delay=0.02
+):
+    group_sync_write = GroupSyncWrite(
+        portHandler,
+        packetHandler,
+        ADDR_PRO_GOAL_POSITION,
+        LEN_PRO_GOAL_POSITION
+    )
+
+    start_positions = [
+        last_positions[motor_id]
+        for motor_id in motor_ids
+    ]
+
+    for step in range(steps + 1):
+        t = step / steps
+
+        positions = [
+            interpolate(start, end, t)
+            for start, end in zip(
+                start_positions,
+                end_positions
+            )
+        ]
+
+        for motor_id, position in zip(
+            motor_ids,
+            positions
+        ):
+            param = [
+                DXL_LOBYTE(DXL_LOWORD(position)),
+                DXL_HIBYTE(DXL_LOWORD(position)),
+                DXL_LOBYTE(DXL_HIWORD(position)),
+                DXL_HIBYTE(DXL_HIWORD(position))
+            ]
+
+            if not group_sync_write.addParam(motor_id, param):
+                group_sync_write.clearParam()
+                raise RuntimeError(
+                    f"[ID:{motor_id}] 데이터 등록 실패"
+                )
+
+        comm_result = group_sync_write.txPacket()
+        group_sync_write.clearParam()
+
+        if comm_result != COMM_SUCCESS:
+            raise RuntimeError(
+                packetHandler.getTxRxResult(comm_result)
+            )
+
+        time.sleep(delay)
+
+    for motor_id, position in zip(
+        motor_ids,
+        end_positions
+    ):
+        last_positions[motor_id] = position
+
+
+def enable_torque(motor_ids):
+    for id in motor_ids:
+        packetHandler.write1ByteTxRx(portHandler, id, ADDR_PRO_TORQUE_ENABLE, 1)
+
+
+def disable_torque(motor_ids):
+    for id in motor_ids:
+        packetHandler.write1ByteTxRx(portHandler, id, ADDR_PRO_TORQUE_ENABLE, 0)
+def read_current_positions(motor_ids):
+    positions = {}
+
+    for motor_id in motor_ids:
+        position, comm_result, dxl_error = packetHandler.read4ByteTxRx(
+            portHandler,
+            motor_id,
+            ADDR_PRO_PRESENT_POSITION
+        )
+
+        if comm_result != COMM_SUCCESS:
+            raise RuntimeError(
+                f"[ID:{motor_id}] 통신 실패: "
+                f"{packetHandler.getTxRxResult(comm_result)}"
+            )
+
+        if dxl_error != 0:
+            raise RuntimeError(
+                f"[ID:{motor_id}] 모터 오류: "
+                f"{packetHandler.getRxPacketError(dxl_error)}"
+            )
+
+        # 어깨 모터의 음수 위치값만 signed 정수로 변환
+        if motor_id in (2, 5, 8, 11) and position >= 0x80000000:
+            position -= 0x100000000
+
+        positions[motor_id] = position
+
+    return positions
+def record_manual_trajectory(
+    motor_ids,
+    filename,
+    sample_period=0.1
+):
+    print(f"기록할 모터: {motor_ids}")
+    print("로봇 몸통을 손이나 지그로 확실히 지지하세요.")
+    input("토크를 해제하려면 Enter를 누르세요.")
+
+    disable_torque(motor_ids)
+
+    print("토크가 해제되었습니다.")
+    input("수동 shift 기록을 시작하려면 Enter를 누르세요.")
+
+    print("기록 중입니다. 종료하려면 Ctrl+C를 누르세요.")
+
+    with open(filename, "w", encoding="utf-8") as file:
+        try:
+            while True:
+                try:
+                    positions = read_current_positions(motor_ids)
+
+                except RuntimeError:
+                    portHandler.clearPort()
+                    time.sleep(sample_period)
+                    continue
+
+                line = ",".join(
+                    str(positions[motor_id])
+                    for motor_id in motor_ids
+                )
+
+                file.write(line + "\n")
+                file.flush()
+
+                time.sleep(sample_period)
+
+        except KeyboardInterrupt:
+            print("\n기록을 종료했습니다.")
+
+    print(f"저장 완료: {filename}")
+def load_trajectory(filename):
+    trajectory = []
+    column_count = None
+
+    with open(filename, "r", encoding="utf-8") as file:
+        for line_number, line in enumerate(file, start=1):
+            line = line.strip()
+
+            if not line:
+                continue
+
+            try:
+                values = tuple(
+                    int(value.strip())
+                    for value in line.split(",")
+                )
+
+            except ValueError:
+                raise ValueError(
+                    f"{filename}의 {line_number}번째 줄 형식 오류: "
+                    f"{line}"
+                )
+
+            if column_count is None:
+                column_count = len(values)
+
+            if len(values) != column_count:
+                raise ValueError(
+                    f"{filename}의 {line_number}번째 줄 열 개수가 "
+                    f"일치하지 않습니다."
+                )
+
+            trajectory.append(values)
+
+    if not trajectory:
+        raise ValueError(f"{filename}에 데이터가 없습니다.")
+
+    return trajectory
+def follow_trajectory(
+    trajectory,
+    motor_ids,
+    last_positions,
+    steps=15,
+    delay=0.02
+):
+    for end_positions in trajectory:
+        move_motors(
+            motor_ids=motor_ids,
+            last_positions=last_positions,
+            end_positions=end_positions,
+            steps=steps,
+            delay=delay
+        )
+try:
+    if not portHandler.openPort():
+        raise RuntimeError()
+
+    if not portHandler.setBaudRate(BAUDRATE):
+        raise RuntimeError()
+
+    all_motors = thighs + knees +joints
+    last_positions = read_current_positions(all_motors)
+    enable_torque(all_motors)
+    print("Phase 1: DOWN → UP")
+    move_four(
+        2, 5, 8, 11,
+        last_positions,
+        0, 0, 0, 0,
+        delay=0.1
+    )
+    move_four(1,7,4,10,last_positions,1800,1800,1800,1800,delay=0.1)
+
+    move_four(3,6,9,0,last_positions,900,900,900,900,delay=0.25)
+    time.sleep(1)  # brief pause at top
+    print("Phase 2: RB stride")
+
+    trajectory = load_trajectory("RBstride.txt")
+
+    follow_trajectory(
+        trajectory=trajectory,
+        motor_ids=[7, 6],
+        last_positions=last_positions,
+        delay=0.015
+    )
+    shift_motor_ids = [
+        10, 4, 1, 7,  # 허벅지 4개
+        9, 3, 6, 0  # 무릎 4개
+    ]
+    shift_trajectory = load_trajectory("shift1.txt")
+
+    follow_trajectory(
+        trajectory=shift_trajectory,
+        motor_ids=shift_motor_ids,
+        last_positions=last_positions,
+        delay=0.015
+    )
+
+    follow_trajectory(
+        trajectory=load_trajectory("RFstride.txt"),
+        motor_ids=[10,9],
+        last_positions=last_positions,
+        delay=0.015
+    )
+
+    follow_trajectory(
+        trajectory=load_trajectory("shift2.txt"),
+        motor_ids=[10,4,1,7,9,3,6,0],
+        last_positions=last_positions,
+        delay=0.015
+    )
+    follow_trajectory(
+        trajectory=load_trajectory("LBstride.txt"),
+        motor_ids=[0,1],
+        last_positions=last_positions,
+        delay=0.015
+    )
+    follow_trajectory(
+        trajectory=load_trajectory("shift3.txt"),
+        motor_ids=[10,4,1,7,9,3,6,0],
+        last_positions=last_positions,
+        delay=0.015
+    )
+    follow_trajectory(
+        trajectory=load_trajectory("LFstride.txt"),
+        motor_ids=[3,4],
+        last_positions=last_positions,
+        delay=0.015
+    )
+    '''record_manual_trajectory(
+        [3,4],
+        filename="LFstride.txt",
+        sample_period=0.1
+    )'''
+
+
+
+finally:
+    portHandler.closePort()
