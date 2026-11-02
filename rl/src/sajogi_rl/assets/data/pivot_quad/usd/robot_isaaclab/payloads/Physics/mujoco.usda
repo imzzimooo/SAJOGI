@@ -1,0 +1,157 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "URDF USD Converter v0.3.2"
+    }
+    defaultPrim = "pivot_assembly_for_urdf2"
+    endTimeCode = 1000000
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    startTimeCode = 0
+    subLayers = [
+        @./physics.usda@
+    ]
+    upAxis = "Z"
+)
+
+over "pivot_assembly_for_urdf2"
+{
+    over "Physics"
+    {
+        over "revolute_4" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+            prepend apiSchemas = ["MjcJointAPI"]
+        )
+        {
+        }
+
+        over "revolute_28" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+            prepend apiSchemas = ["MjcJointAPI"]
+        )
+        {
+        }
+
+        over "revolute_29" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+            prepend apiSchemas = ["MjcJointAPI"]
+        )
+        {
+        }
+
+        over "revolute_30" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+            prepend apiSchemas = ["MjcJointAPI"]
+        )
+        {
+        }
+
+        over "revolute_31" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+            prepend apiSchemas = ["MjcJointAPI"]
+        )
+        {
+        }
+
+        over "revolute_36" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+            prepend apiSchemas = ["MjcJointAPI"]
+        )
+        {
+        }
+
+        over "revolute_37" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+            prepend apiSchemas = ["MjcJointAPI"]
+        )
+        {
+        }
+
+        over "revolute_38" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+            prepend apiSchemas = ["MjcJointAPI"]
+        )
+        {
+        }
+
+        over "revolute_39" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+            prepend apiSchemas = ["MjcJointAPI"]
+        )
+        {
+        }
+
+        def MjcActuator "revolute_4_actuator"
+        {
+            uniform double mjc:forceRange:max = 100
+            uniform double mjc:forceRange:min = -100
+            custom rel mjc:target
+            append rel mjc:target = </pivot_assembly_for_urdf2/Physics/revolute_4>
+        }
+
+        def MjcActuator "revolute_28_actuator"
+        {
+            uniform double mjc:forceRange:max = 100
+            uniform double mjc:forceRange:min = -100
+            custom rel mjc:target
+            append rel mjc:target = </pivot_assembly_for_urdf2/Physics/revolute_28>
+        }
+
+        def MjcActuator "revolute_29_actuator"
+        {
+            uniform double mjc:forceRange:max = 100
+            uniform double mjc:forceRange:min = -100
+            custom rel mjc:target
+            append rel mjc:target = </pivot_assembly_for_urdf2/Physics/revolute_29>
+        }
+
+        def MjcActuator "revolute_30_actuator"
+        {
+            uniform double mjc:forceRange:max = 100
+            uniform double mjc:forceRange:min = -100
+            custom rel mjc:target
+            append rel mjc:target = </pivot_assembly_for_urdf2/Physics/revolute_30>
+        }
+
+        def MjcActuator "revolute_31_actuator"
+        {
+            uniform double mjc:forceRange:max = 100
+            uniform double mjc:forceRange:min = -100
+            custom rel mjc:target
+            append rel mjc:target = </pivot_assembly_for_urdf2/Physics/revolute_31>
+        }
+
+        def MjcActuator "revolute_36_actuator"
+        {
+            uniform double mjc:forceRange:max = 100
+            uniform double mjc:forceRange:min = -100
+            custom rel mjc:target
+            append rel mjc:target = </pivot_assembly_for_urdf2/Physics/revolute_36>
+        }
+
+        def MjcActuator "revolute_37_actuator"
+        {
+            uniform double mjc:forceRange:max = 100
+            uniform double mjc:forceRange:min = -100
+            custom rel mjc:target
+            append rel mjc:target = </pivot_assembly_for_urdf2/Physics/revolute_37>
+        }
+
+        def MjcActuator "revolute_38_actuator"
+        {
+            uniform double mjc:forceRange:max = 100
+            uniform double mjc:forceRange:min = -100
+            custom rel mjc:target
+            append rel mjc:target = </pivot_assembly_for_urdf2/Physics/revolute_38>
+        }
+
+        def MjcActuator "revolute_39_actuator"
+        {
+            uniform double mjc:forceRange:max = 100
+            uniform double mjc:forceRange:min = -100
+            custom rel mjc:target
+            append rel mjc:target = </pivot_assembly_for_urdf2/Physics/revolute_39>
+        }
+    }
+}
+
