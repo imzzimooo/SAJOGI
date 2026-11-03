@@ -9,6 +9,7 @@ l1 = 0.1422;  % Link #1 length (m)
 l2 = 0.115;  % Link #2 length (m)
 torso_dim=[L_back 0.04875 0.152];
 %torso COM
+lowerbody_com=
 torso_COM=[-0.165 -1.237 -1.096]*0.001;
 %link1 COM
 link1_COM=[0 -43.026 0]*0.001;
@@ -16,11 +17,13 @@ link2_COM=[0 -5.8413 0]*0.001;
 % Robot mass
 M = 1.318;      % Torso mass (kg)
 mU=1; %upper torso mass(unknown)
-mL=1; %lower torso mass(unknown)
+mL=0.3411; %lower torso mass
 m1 = 0.17824;   % Leg link #1 mass (kg)
 m2 = 0.03558;   % Leg link #2 mass (kg)
 
 % Moment of inertia (kg-m^2)
+lowerbody_MOI=0;
+lowerbody_POI=0;
 torso_MOI = [0.01284 0.003082 0.01451];
 torso_POI = [-10467.0584388 16160.2925201 4299.4783727] * 1e-9;
 % Gravity (m/s^2)
@@ -30,6 +33,9 @@ g = -9.81;
 Ts = 0.025;
 %gait period
 period=0.8;
+%gait amplitude
+a_amp=0.03;
+b_amp=0.03;
 %rotation angle of each pulse
 dTheta=20*pi/180;
 %pulse duration
